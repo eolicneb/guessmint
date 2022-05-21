@@ -1,32 +1,22 @@
-from random import randint
+from random_grid import RandomGrid
 
 
 class Renderer:
     def __init__(self, size):
-        self.size = size
+        self.grid = RandomGrid(size)
         self.legend = None
+        self.padding = "\n"*100
 
     def __call__(self, answer):
-        dots, dot = set(), None
-        for _ in range(answer):
-            while not dot or dot in dots:
-                dot = self._random_dot()
-            dots.add(dot)
-        self._show(dots)
+        self._show(answer)
 
-    def _random_dot(self):
-        I, J = self.size
-        i = randint(0, I-1)
-        j = randint(0, J-1)
-        return (i, j)
+    def screen(self, count):
+        screen_ij = [["*" if (i, j) in self.grid.get(count) else " "
+                      for j in range(self.grid.h)] for i in range(self.grid.w)]
+        return "\n".join(" ".join(line) for line in screen_ij)
 
-    def _show(self, dots):
-        I, J = self.size
-        screen_ij = [["*" if (i, j) in dots else " " \
-            for j in range(J)] for i in range(I)]
-        screen = "\n".join(" ".join(line) for line in screen_ij)
-
-        padding = "\n"*100
+    def _show(self, answer):
+        padding = self.padding
         if self.legend:
             padding += self.legend + "\n"
-        print(padding + "\n" + screen)
+        print(padding + "\n" + self.screen(answer))

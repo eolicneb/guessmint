@@ -12,10 +12,16 @@ class StatPoint:
         self.time = time() - self.time
         self.guess = guess
 
+    @property
+    def difference(self):
+        if self.guess is None:
+            return None
+        return self.guess - self.answer
+
     def __str__(self):
         return (f"correct: {self.answer:3d}"
-            f" , guess: {self.guess:3d}"
-            f"  (in {self.time:5.1f} sec.)")
+                f" , guess: {self.guess:3d}"
+                f"  (in {self.time:5.1f} sec.)")
 
 
 class GuessCore:
@@ -65,5 +71,16 @@ class GuessCore:
             self.goals += 1
 
     @property
+    def last_difference(self):
+        if self.__stat_point is not None:
+            return self.__stat_point.difference
+
+    @property
     def result(self):
         return self.goals, self.times
+
+    @property
+    def std_dev(self):
+        if self.times < 2:
+            return 0
+        return sum(x.difference*x.difference for x in self.stats) / (self.times - 1)
