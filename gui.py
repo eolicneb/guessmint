@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from tkinter import (Tk, Text, StringVar, DoubleVar, Canvas,
                      RIGHT, BOTH, BOTTOM, SUNKEN, TOP, LEFT, END, X)
 from tkinter.ttk import Frame, Button, Label, Style
@@ -178,17 +179,32 @@ class Index(Canvas):
                  bg_color="grey", base_color="black", main_color="white"):
         super().__init__(root)
 
-        self.unit_px = unit_px
-        self.width_units = width_units
+        self._unit_px = unit_px
+        self._width_units = width_units
 
         self.bg_color = bg_color
         self.base_color = base_color
         self.main_color = main_color
 
         self.value = DoubleVar()
+        self.need_new_ticks = True
 
         self.init_ui()
         self.redraw()
+
+    @property
+    def width_units(self):
+        if self._width_units < self.value.get():
+            self._width_units = math.ceil(self.value.get())
+            self.need_new_ticks = True
+        return self._width_units
+
+    @property
+    def unit_px(self):
+        if self.winfo_width() < 2:
+            return self._unit_px
+        self._unit_px = self.winfo_width() / (2 * self.width_units)
+        return self._unit_px
 
     def init_ui(self):
         self.configure(width=2*self.unit_px*self.width_units, height=25,
@@ -201,7 +217,10 @@ class Index(Canvas):
         self.value_index = self.create_oval(0, 0, 0, 0, fill=self.main_color)
         self.base_line = self.create_line(0, 0, 0, 0, fill=self.base_color)
         self.zero_index = self.create_line(0, 0, 0, 0, fill=self.base_color)
-        self.ticks = [self.create_line(*p, fill=self.base_color) for p in self.make_ticks()]
+        self.ticks = self.create_ticks()
+
+    def create_ticks(self):
+        return [self.create_line(*p, fill=self.base_color) for p in self.make_ticks()]
 
     def redraw(self):
         width, height = self.size
@@ -209,8 +228,10 @@ class Index(Canvas):
         self.coords(self.base_line, 0, half_height, width, half_height)
         self.coords(self.zero_index, *self.center_pos)
         self.coords(self.value_index, *self.index_pos(self.value.get()))
-        for tick, pos in zip(self.ticks, self.make_ticks()):
-            self.coords(tick, *pos)
+        if self.need_new_ticks:
+            for tick in self.ticks:
+                self.delete(tick)
+            self.ticks = self.create_ticks()
 
     def set(self, value):
         self.value.set(value)
@@ -228,11 +249,17 @@ class Index(Canvas):
         x_pos_left = - int(value * self.unit_px) + x0
         return x_pos_left, y0, x_pos_right, y1
 
-    def tick_pos(self, unit: int):
+    def tick_pos(self, unit: int, height_span=0.5):
         xc, _, _, h = self.center_pos
-        x = xc + self.unit_px * unit
-        y0, y1 = h // 4, (3*h) // 4
+        x = xc + int(self.unit_px * unit)
+        y0, y1 = self.height_pos(h, height_span)
         return x, y0, x, y1
+
+    @staticmethod
+    def height_pos(height, height_span):
+        y0 = height * (.5 - height_span / 2)
+        y1 = height * (.5 + height_span / 2)
+        return int(y0), int(y1)
 
     def make_ticks(self):
         for i in range(1-self.width_units, self.width_units):
@@ -242,14 +269,14 @@ class Index(Canvas):
 
     @property
     def size(self):
-        print(f"W={self.winfo_width()}, H={self.winfo_height()}")
+        # print(f"W={self.winfo_width()}, H={self.winfo_height()}")
         return self.winfo_width(), self.winfo_height()
 
 
 def gui_main():
     root = Tk()
     root.geometry("600x650")
-    app = GuessGui(root, (6, 12))
+    app = GuessGui(root, (6, 20))
     root.mainloop()
 
 
